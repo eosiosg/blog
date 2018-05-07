@@ -27,7 +27,9 @@ Producer Registration
 * The core logic code below is to insert or replace producers' configurations (i.e. public key & parameters) into `producerinfo` table.
 
 ```cpp
-void system_contract::regproducer( const account_name producer, const eosio::public_key& producer_key, const std::string& url ) { //, const eosio_parameters& prefs ) {
+void system_contract::regproducer( const account_name producer, 
+                    const eosio::public_key& producer_key, const std::string& url ) { 
+                    //, const eosio_parameters& prefs ) {
     ...
 
     if ( prod != _producers.end() ) {
@@ -65,7 +67,8 @@ Token Staking
               require_auth( from );
               ...
 
-              set_resource_limits( tot_itr->owner, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+              set_resource_limits( tot_itr->owner, tot_itr->ram_bytes, 
+                                tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
               if( N(eosio) != from) {
                  INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)}, 
@@ -131,7 +134,8 @@ If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated
     * Add each voting producer's vote weight by the new weight.
 
     ```cpp
-    void system_contract::voteproducer( const account_name voter_name, const account_name proxy, const std::vector<account_name>& producers ) {
+    void system_contract::voteproducer( const account_name voter_name, 
+                    const account_name proxy, const std::vector<account_name>& producers ) {
         require_auth( voter_name );
 
         ...
