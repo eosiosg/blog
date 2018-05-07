@@ -12,7 +12,7 @@ In this article, we will be talking about detailed implementations on **Producer
 
 TL;DR:
 --
-* **Token holders should stake with their tokens on net and cpu**
+* **Token holders should stake with their tokens on net and cpu for voting**
 * **On voting, all staked tokens will convert to an identical amount of votes for up to 30 producers**
 * **Refunding process (from staked status) takes up to 3 days to be available in token balance**
 * **Newer votes possess higher voting weights**
