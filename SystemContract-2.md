@@ -13,25 +13,22 @@ In this article, we will be talking about detailed implementations on **Producer
 TL;DR:
 --
 * **Token holders should stake with their tokens on net and cpu**
-* **Stakes will convert to an identical amount of votes for up to 30 producers**
+* **On voting, all staked tokens will convert to an identical amount of votes for up to 30 producers**
 * **Refunding process (from staked status) takes up to 3 days to be available in token balance**
 * **Newer votes possess higher voting weights**
 
 ![voting](https://github.com/oldcold/preview/blob/master/voting.png)
+
 Producer Registration
 --
 **Every account should register to be a producer first before it can be voted. This process is done by pushing a `system_contract::regproducer` action.**
 
-Producers will have to register with their public keys and associated with other necessary configurations. 
 
-**This part of code is under rapid development, we will keep updating if significant changes are found.* 
+* The core logic code below is to insert or replace producers' configurations (i.e. public key & parameters) into `producerinfo` table.
+
 ```cpp
 void system_contract::regproducer( const account_name producer, const eosio::public_key& producer_key, const std::string& url ) { //, const eosio_parameters& prefs ) {
-    eosio_assert( url.size() < 512, "url too long" );
-    //eosio::print("produce_key: ", producer_key.size(), ", sizeof(public_key): ", sizeof(public_key), "\n");
-    require_auth( producer );
-
-    auto prod = _producers.find( producer );
+    ...
 
     if ( prod != _producers.end() ) {
         if( producer_key != prod->producer_key ) {
@@ -48,6 +45,10 @@ void system_contract::regproducer( const account_name producer, const eosio::pub
     }
 }
 ```
+**This part of code is under rapid development, we will keep updating it if significant changes are found.* 
+
+
+
     
 Token Staking
 --
@@ -56,7 +57,7 @@ Token Staking
 1. If a user has not staked before, insert a record for this account in the table `deltable`. If a user has staked, add newly amount to the existing amount.
 2. Set resource limits for stake receiver (same with sender when voting). Transfer corresponding amount as stake to a public account `eosio`.
 
-    ```cpp
+   ```cpp
     void system_contract::delegatebw( account_name from, account_name receiver,
                                      asset stake_net_quantity, 
                                      asset stake_cpu_quantity )                  
@@ -74,6 +75,9 @@ Token Staking
           }
     ```
 3. Update voter's staked amount.
+    * Find the voter from `voters` table, if not exist, insert a new record of this voter.
+    * Add newly delegated stake into the voter's `staked` attribute.
+    * Call `voteproducer` action to update vote results. This means if the push sender has voted before, on new `delegatebw` action, votes will be updated for last voting producers (or lasting voting proxy).
     ```cpp
     ...
           print( "voters \n" );
@@ -122,6 +126,10 @@ Vote On Producer / Proxy
 If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated. 
 
 3. Reduce `last_vote_weight` (if ever), and then add current vote weight. 
+    * Create a relation between voting producer and vote weight.
+    * Deduct last voting weight from voting producers.
+    * Add each voting producer's vote weight by the new weight.
+
     ```cpp
     void system_contract::voteproducer( const account_name voter_name, const account_name proxy, const std::vector<account_name>& producers ) {
         require_auth( voter_name );
@@ -138,26 +146,13 @@ If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated
                 producer_deltas[p] += new_vote_weight;
             }
         }
-
-        if( voter->proxy != account_name() ) {
-            auto old_proxy = _voters.find( voter->proxy );
-            _voters.modify( old_proxy, 0, [&]( auto& vp ) {
-                vp.proxied_vote_weight -= voter->last_vote_weight;
-                 print( "    vote weight: ", vp.last_vote_weight, "\n" );
-            });
-        }
-
-        if( proxy != account_name() && new_vote_weight > 0 ) {
-            auto new_proxy = _voters.find( voter->proxy );
-            eosio_assert( new_proxy != _voters.end() && new_proxy->is_proxy, "invalid proxy specified" );
-            _voters.modify( new_proxy, 0, [&]( auto& vp ) {
-                vp.proxied_vote_weight += new_vote_weight;
-                print( "    vote weight: ", vp.last_vote_weight, "\n" );
-            });
-        }    
+        ...
+    }    
     ```
 
-4. Update voting results by modifying `producerinfo` table and `voters` table respectively.
+4. Record voting results.
+    * Modify `voters` table, update vote weight & voting producers (or proxy) respectively.
+    * Modify `producerinfo` table, update producer's votes.
 
     ```cpp
         ...
@@ -192,6 +187,8 @@ If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated
     * Proxy and producers cannot be voted at the same time.
 2. Calculate current vote weight, same as above.
 3. Update proxy's vote weight
+    * Deduct last voting weight from the voting proxy.
+    * Add each voting proxy's vote weight by the new amount.
     ```cpp
         ...
         if( voter->proxy != account_name() ) {
@@ -216,6 +213,9 @@ If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated
 
 Votes Change & Withdraw
 --
+
+![delegating](https://github.com/oldcold/preview/blob/master/undelegating.png)
+
 #### Votes Change
 
 Voters are able to change voted producers (or proxy) by **pushing `voteproducer` actions again**, details have been discussed in the previous section. 
@@ -226,7 +226,9 @@ Voters are able to change voted producers (or proxy) by **pushing `voteproducer`
 
 1. Decrease refunding amount from voter's `staked` column of `voter` table.
 2. Update `totals_tbl` table and update resource limits for the account.
-3. Create refund request, note that if user undelegate many times within a short period of time, the last undelegating time will be recorded (used for calculating the available refunding time).
+3. Create refund request.
+    * Update `refunds` table with unstaked amount
+    * If user undelegate many times within a short period of time, the last undelegating time will be recorded (this time will be used for calculating the available refunding time).
     ```cpp
        void system_contract::undelegatebw( account_name from, account_name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
@@ -247,7 +249,10 @@ Voters are able to change voted producers (or proxy) by **pushing `voteproducer`
          }
         ...
     ```
-4. **Create (or replace) a deferred `system_contract::refund` transaction & update voting results** (decreasing corresponding votes from producers). `refund_delay = 3*24*3600`, i.e. 3 days.
+4. Create (or replace) a deferred `system_contract::refund` transaction & update voting results. 
+    * Push a deferred transaction.
+    * `refund_delay = 3*24*3600`, i.e. 3 days.
+    * Call `voteproducer` to deduct corresponding votes from voted producers.
     ```cpp
         ...
         eosio::transaction out;
