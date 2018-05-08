@@ -20,7 +20,7 @@ TL;DR:
 
 Producer Registration
 --
-**Accounts should register themselves as producer first before they can be voted. This process is done by pushing. This process is done by pushing a `system_contract::regproducer` action.**
+**Accounts should register themselves as producer first before they can be voted. This process is done by pushing a `system_contract::regproducer` action.**
 
 
 * The core logic code below is to insert or replace producers' configurations (i.e. public key & parameters) into `producerinfo` table.
