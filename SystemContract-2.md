@@ -111,7 +111,7 @@ Token Staking
 
 Vote On Producer / Proxy
 --
-**Stake holders can vote producers (or proxy, who will vote producers on behalf of push sender), all stakes will convert to weighted n votes and then add up to 30 producers by n votes.**
+**Stake holders (token holders who have their tokens staked) can vote for producers (or proxy, who will vote on behalf of push sender), all stakes will convert to weighted x votes and then add up to 30 producers by x votes.**
 
 #### Vote producer
 **Leaving `proxy` arguments to be empty*
@@ -225,7 +225,7 @@ Voters are able to change voted producers (or proxy) by **pushing `voteproducer`
 
 #### Votes Withdraw (Unstake)
 
-**Voters are able to withdraw their votes, by pushing `system_contract::undelegatebw` actions with any amount less or equal to the net & cpu staked they have delegated. Undelegated stakes will be available for `system_contract::refund` after 3 days.**
+**Voters can withdraw their votes by pushing by pushing `system_contract::undelegatebw` actions with any amount that is no bigger than the net & cpu been staked & delegated. Undelegated stakes will be available for `system_contract::refund` after 3 days.**
 
 1. Decrease refunding amount from voter's `staked` column of `voter` table.
 2. Update `totals_tbl` table and update resource limits for the account.
@@ -273,9 +273,9 @@ Voters are able to change voted producers (or proxy) by **pushing `voteproducer`
 
 Conclusion
 --
-1. Only tokens **staked** on net & cpu are available on voting.
-2. During voting action, every voted producer (up to 30) is going to get **equivalent weighted votes**, whose amount is calculated based on staked amount.
-3. **Newer votes count more than older votes**, the weights grows approximately linearly.
+1. Token owner can only vote after they **staked** their tokens on net & cpu.
+2. During voting action, all stakes of the voter will convert into x weighted votes, and every voted producer (up to 30) is going to get **equivalent x weighted votes**.
+3. **Newer votes count more than older votes**, the weight grows approximately linearly.
 4. Users can undelegate their stakes and have to wait up to **3 days** before they can re-allocate this amount of tokens.
 
 *In the following article, we are going to talk about some detailed implementation about **user resources**, including delegate cpu & net, buy & sell ram, new account, producer voting and proxy related stuff.*
