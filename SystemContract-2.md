@@ -1,27 +1,26 @@
 System Contract Part #2 - Voting Process 
 --
 
-In eos network, [**eosio.system**](https://github.com/EOSIO/eos/tree/slim/contracts/eosio.system) contract enables users to 1) stake tokens, and then vote on producers (or worker proposals), 2) proxy their voting influence to other users, 3) register producers, 4) claim producer rewards, 5) delegate resources (net, cpu & ram) and push other necessary actions to keep blockchain system running.
+In eos network, [**eosio.system**](https://github.com/EOSIO/eos/tree/slim/contracts/eosio.system) contract enable users to 1) stake tokens, and then vote on producers (or worker proposals), 2) proxy their voting influence to other users, 3) register producers, 4) claim producer rewards, 5) delegate resources (net, cpu & ram) and push other necessary actions to keep blockchain system running.
 
-In this series, we will go through this contract and talk about what is going on inside this contract and how to use it. 
+In this series, we will go through What is the contract, What are included in the contract and How the contract can be used.
 
-
-In this article, we will be talking about detailed implementations on **Producer Registration**, **Token Staking**, **Voting on BP** , and **Votes Change & Withdraw** successively. 
+In this article, we will be discussing detailed flows/steps on **Producer Registration**, **Token Staking**, **Voting on BP** , and **Changing/Withdrawing Vote** successively. 
 
 *All codes present are based on commit of [44e7d3e](https://github.com/EOSIO/eos/commit/44e7d3ef2503d7bc45afc18f04f0289ed26cfdd7)*
 
 TL;DR:
 --
-* **Token holders should stake with their tokens on net and cpu for voting**
-* **On voting, all staked tokens will convert to an identical amount of votes for up to 30 producers**
-* **Refunding process (from staked status) takes up to 3 days to be available in token balance**
+* **Token holders have to stake with their tokens on net and cpu for voting**
+* **On voting, all staked assets will convert to `x` amount of weighted votes, which can be used to vote up to 30 producers and each selected producer will get `x` amount of votes repectively**
+* **Refunding process takes up to 3 days to reflect the unstaked tokens in available token balance**
 * **Newer votes possess higher voting weights**
 
 ![voting](https://github.com/oldcold/preview/blob/master/voting.png)
 
 Producer Registration
 --
-**Every account should register to be a producer first before it can be voted. This process is done by pushing a `system_contract::regproducer` action.**
+**Accounts should register themselves as producer first before they can be voted. This process is done by pushing. This process is done by pushing a `system_contract::regproducer` action.**
 
 
 * The core logic code below is to insert or replace producers' configurations (i.e. public key & parameters) into `producerinfo` table.
@@ -54,7 +53,7 @@ void system_contract::regproducer( const account_name producer,
     
 Token Staking
 --
-**Token holders are eligible to vote if they have staked on net and cpu. Staking process is done by pushing a `system_contract::delegatebw` action. Inside `delegatebw` action, voter's tokens are staked and cannot be transferred until refunded.**
+**Token holders can only vote after they have staked their tokens on net and cpu. Staking process is done by pushing a `system_contract::delegatebw` action. Inside `delegatebw` action, voter's tokens are staked and cannot be transferred until refunded.**
 
 1. If a user has not staked before, insert a record for this account in the table `deltable`. If a user has staked, add newly amount to the existing amount.
 2. Set resource limits for stake receiver (same with sender when voting). Transfer corresponding amount as stake to a public account `eosio`.
@@ -215,7 +214,7 @@ If the voter is a proxy, `proxied_vote_weight` of the voter will also be updated
 
 
 
-Votes Change & Withdraw
+Changing/Withdrawing Vote
 --
 
 ![delegating](https://github.com/oldcold/preview/blob/master/undelegating.png)
@@ -275,7 +274,7 @@ Voters are able to change voted producers (or proxy) by **pushing `voteproducer`
 Conclusion
 --
 1. Only tokens **staked** on net & cpu are available on voting.
-2. During voting action, every voted producer (up to 30) is going to get **identical weighted votes**, whose amount is calculated based on staked amount.
+2. During voting action, every voted producer (up to 30) is going to get **equivalent weighted votes**, whose amount is calculated based on staked amount.
 3. **Newer votes count more than older votes**, the weights grows approximately linearly.
 4. Users can undelegate their stakes and have to wait up to **3 days** before they can re-allocate this amount of tokens.
 
