@@ -1,6 +1,6 @@
 #EOS Signature source code analysis
 
-Signiture is the core part for every blockchain system. In the **EOS network**, there are several kinds of signiture, **transaction_signiture**, **block\_producer_signature**, **multi_signiture** and so on. In this article, we would like to introduce these signatures successively except **multi_signiture** from the source code.
+Signature is the core part for every blockchain system. In the **EOS network**, there are several kinds of Signature, **transaction_signature**, **block\_producer_signature**, **multi_signature** and so on. In this article, we would like to introduce these signatures successively except **multi_signature** from the source code.
 
 ⚠️**Warning**:  Before reading this article, make sure you have a clear mind and follow the source code step by step. Because you have a long tedious journey to walk.
 
