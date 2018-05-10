@@ -7,7 +7,7 @@ Signiture is the core part for every blockchain system. In the **EOS network**, 
 *All the code is base on eos [slim branch](https://github.com/EOSIO/eos/tree/slim).*
 
 
-## Trasaction signature 
+## Transaction signature 
 In the EOS system, **controller** will wrap the transactions into the block, and one piece of **transaction** is constructed by **one or more actions**. Sign the transaction means you must sign every action occured in this transaction. The transaction will be **failed** and **will not write on the blockchain** if **any one action authorized failed**.
 
 When a node join into the testnet. You should need to use **cleos** command. If you want to push some transactions such as transfer, regproducer, voteproducer, you should add the parameter -p (permission) to sign this transaction. Then the block producer will push these transactions to block, later need to be sign by this block producer. 
