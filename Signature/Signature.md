@@ -13,7 +13,7 @@ In the EOS system, **controller** will wrap the transactions into the block, and
 When a node join into the testnet. You should need to use **cleos** command. If you want to push some transactions such as transfer, regproducer, voteproducer, you should add the parameter -p (permission) to sign this transaction. Then the block producer will push these transactions to block, later need to be sign by this block producer. 
 
 ###Whole flow of transaction signature in function
-![avatar](/Users/zhangyy/Downloads/eos_signature.png)
+![avatar](https://github.com/eosiosg/blog/blob/master/Signature/eos_signature.png)
 
 Before you do this experiment, make sure you have start nodeos and keosd process.
 Our team have open source
