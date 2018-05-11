@@ -1,22 +1,20 @@
 #EOS Signature source code analysis
 
-Signature is the core part for every blockchain system. In the **EOS network**, there are several kinds of Signature, **transaction_signature**, **block\_producer_signature**, **multi_signature** and so on. In this article, we would like to introduce these signatures successively except **multi_signature** from the source code.
+Signature is the core part for every blockchain system. In the **EOS network**, there are several kinds of signature, **transaction_signature**, **block\_producer_signature**, **multi_signature** and so on. In this article, we would like to introduce **transaction_signature**, **block\_producer_signature** successively from the source code.
 
-⚠️**Warning**:  Before reading this article, make sure you have a clear mind and follow the source code step by step. Because you have a long tedious journey to walk.
 
-*All the code is base on eos [slim branch](https://github.com/EOSIO/eos/tree/slim).*
+*All the code is base on eos [8e2ac45](https://github.com/EOSIO/eos/tree/slim).*
 
 
 ## Transaction signature 
-In the EOS system, **controller** will wrap the transactions into the block, and one piece of **transaction** is constructed by **one or more actions**. Sign the transaction means you must sign every action occured in this transaction. The transaction will be **failed** and **will not write on the blockchain** if **any one action authorized failed**.
+In the EOS system, the **controller** will wrap the transactions into a block, and each **transaction** contains one or more **actions**. To successful sign a transaction, it is compulsory to successfully sign each action. If any authority check fails in action, the transaction will fail and not be written on the blockchain. However, in other cases, failed transactions might be written on to blockchain.
 
-When a node join into the testnet. You should need to use **cleos** command. If you want to push some transactions such as transfer, regproducer, voteproducer, you should add the parameter -p (permission) to sign this transaction. Then the block producer will push these transactions to block, later need to be sign by this block producer. 
+As documented in **cleos**, there are some actions have -p flag indicating permissions need be granted.  Besides, not only users need to use a signature, but block producers also need to sign the block they produced.
 
 ###Whole flow of transaction signature in function
 ![avatar](https://github.com/eosiosg/blog/blob/master/Signature/eos_signature.png)
 
-Before you do this experiment, make sure you have start nodeos and keosd process.
-Our team have open source
+An example would make the whole process to be easier understood. But before that, you may need following scripts to setup nodeos and keosd.
 [one-click-boot script](https://github.com/eosiosg/testnet/tree/master/scripts)
 
 ```
@@ -27,7 +25,7 @@ cleos push action eosio regproducer '{"producer":"producer", "producer_key":"454
 **These command tested in [DAWN-2018-04-27-ALPHA](https://github.com/EOSIO/eos/tree/DAWN-2018-04-27-ALPHA)*
 
 The **-p** parameter means sign this transaction. Then we need to dive into the source code in [cleos main](https://github.com/EOSIO/eos/blob/slim/programs/cleos/main.cpp). 
-There are some conventions you need to know in **cleos/main.cpp**. Nearly all subcommand functions have two key functions **send_actions** and **create_action**. Such as tranfer, regproducer, delegatebw, undelegatebw, voteproducer and so on.
+There are some conventions need to know in **cleos/main.cpp**. Nearly all subcommand functions have two key functions **send_actions** and **create_action**. Such as tranfer, regproducer, delegatebw, undelegatebw, voteproducer and so on.
 
 For example, register producer subcommand.
 
@@ -85,8 +83,8 @@ fc::variant push_actions(std::vector<chain::action>&& actions, int32_t extra_kcp
 
 ###push_transaction
 1. The **push_transaction** is the **key function** of **action authorization**
-2. first **determine\_required\_keys** get the **public_keys**
-3. second **sign_transaction** with the required_key get before, we will disscuss it later
+2. Firstly,  **determine\_required\_keys** get the **public_keys**
+3. Secondly, **sign_transaction** with the required_key get before, we will disscuss it later
 
 ```cpp
 fc::variant push_transaction( signed_transaction& trx, int32_t extra_kcpu = 1000, packed_transaction::compression_type compression = packed_transaction::none ) {
@@ -114,7 +112,7 @@ fc::variant push_transaction( signed_transaction& trx, int32_t extra_kcpu = 1000
 	
 ###determine\_required_keys
 1. Call wallet API to fetch all unlocked(available) public keys, 
-2. use authorization_manager to verify the require keys
+2. use **authorization_manager** to verify the require keys
 
 ```cpp
 fc::variant determine_required_keys(const signed_transaction& trx) {
@@ -127,7 +125,7 @@ fc::variant determine_required_keys(const signed_transaction& trx) {
    return required_keys["required_keys"];
 }
 ```
-If you want to sign a transaction, make sure you have keosd deamon which hold the wallet\_api plugin and wallet\_plugin. First to call wallet api to get all unlock public keys, and then to call the **chain_api** to verify the authorization from blockchain database.
+If required to sign a transaction, make sure keosd deamon up which hold the wallet\_api plugin and wallet\_plugin. Firstly to call wallet api to get all unlock public keys, and then to call the **chain_api** to verify the authorization from blockchain database.
 
 
 ###get\_required_keys
@@ -168,11 +166,11 @@ At the **determine\_required_key** function, it will call chain\_api, the origin
 	
 Then how to get the legal key set? That's the key point which confuse me for a long time. Before this section you should have some **prerequisite** skill about C++ feature [**Operators Overloading**](https://www.tutorialspoint.com/cplusplus/cpp_overloading.htm).
 
-Now, you can see the left part of **flow**. The second public **satisfied** funtion return and visitor. Actually It will call the **overloading ( )** function in weight\_tally\_visitor.
+Now, switch to the left part of **flow**. The **second** public **satisfied** funtion return and visitor. Actually It will call the **overloading ( )** function in weight\_tally\_visitor.
 
 **There are 4 public satisfied override function and 1 private satisfied, make sure pick the right one*
 
-1. The permission_level object which contain actor and permission (active, owner) needs to put in the cache for **checker performance**
+1. The permission_level object which contain actor and permission (active, owner) needs to put in the cache for **system performance**
 2. **weight\_tally\_visitor** is to tally all weights, including (wait\_weight, key\_weight)
 3. call the **operator ( ) overloading** function, return True if tally\_weight > 0.
 
@@ -283,9 +281,9 @@ wallet_manager::sign_transaction(const chain::signed_transaction& txn, const fla
 This fragment is pretty clear and easy to understand. The **sign** action is performed in **transaction.cpp** that I will disscuss more in the next blog mainly focus on the controller.cpp to wrap the transactions to a whole block. That's the whole flow of **transaction signature**.
 
 ##Block signature
-In this section, we will look more details for sign block. I won't introduce more about **controller.cpp** in this blog except the **sign block**. 
+In this section, we will look more details for sign block. We won't introduce more about **controller.cpp** in this blog except the **sign block**. 
 
-Before this section, you should know [**lambda function**](https://msdn.microsoft.com/en-us/library/dd293608.aspx) feature in C++. In the following function, the parameter is a call_back function which is called in **producer\_plugin.cpp**. 
+Before this section, It requires to know [**lambda function**](https://msdn.microsoft.com/en-us/library/dd293608.aspx) feature in C++. In the following function, the parameter is a call_back function which is called in **producer\_plugin.cpp**. 
 ###sign block
 The **sign_block** function is called in **producer\_plugin.cpp** with a param lambda function. 
 
@@ -300,7 +298,7 @@ void sign_block( const std::function<signature_type( const digest_type& )>& sign
 1. The **\_private_keys** is a public property map store in producer plugin, which I think will have some security issue.
 2. **finalize_block** will generate the **action\_merkle\_root** and **transaction\_merkle\_root** and create block summary
 3. **sign_block** will use the **private\_key\_itr->second** which is private_key to sign in **lamdba function**  
-4. last step is commit block to the block chain, you can check more info in **controller.cpp**
+4. last step is commit block to the block chain, refer **controller.cpp** for more information.
 
 ```cpp
 const auto& scheduled_producer = hbs->get_scheduled_producer( pending_block_timestamp );
@@ -322,7 +320,7 @@ chain.commit_block();
 
 *  **Action or actions** must be signed correctly in **every transaction**.
 * Analysis **sign_transaction** from the source code. You should be clear about the whole flow of signature, such as determine\_required\_keys, and sign transaction using private keys.
-* You should **not** save your wallet private key in your node(if you own a node server). If you want to start a wallet in your node server, you should **disable** the wallet port or keep your wallet **locked**.
+* Token holders should **not** save wallet private key in personal node(if you own a node server). It should be **disabled** the wallet port or keep your wallet **locked** if token holder want to start a wallet in your node server.
 * Block signature is called in **producer_plugin.cpp** signed by scheduled_producers. 
 
 
