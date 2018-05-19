@@ -3,7 +3,7 @@
 Signature is the core part for every blockchain system. In the **EOS network**, there are several kinds of signature, **transaction_signature**, **block\_producer_signature**, **multi_signature** and so on. In this article, we would like to introduce **transaction_signature**, **block\_producer_signature** successively from the source code.
 
 
-*All the code is base on eos [8e2ac45](https://github.com/EOSIO/eos/tree/slim).*
+*All the code is base on eos [9be8910](https://github.com/EOSIO/eos/tree/dawn-v4.0.0).*
 
 
 ## Transaction signature 
@@ -15,14 +15,12 @@ As documented in **cleos**, there are some actions have -p flag indicating permi
 ![avatar](https://github.com/eosiosg/blog/blob/master/Signature/eos_signature.png)
 
 An example would make the whole process to be easier understood. But before that, you may need following scripts to setup nodeos and keosd.
-[one-click-boot script](https://github.com/eosiosg/testnet/tree/master/scripts)
+[scripts](https://github.com/eosiosg/scripts)
 
 ```
 cleos push action eosio.token transfer '["voter", "voter1", "100.0000 EOS","m"]' -p voter
-cleos push action eosio regproducer '{"producer":"producer", "producer_key":"454f53355064556156723438395641384b356a525570736a524d35316847454445584e366a797043424e3535516e4264656f5a4577", "prefs":{"max_storage_size":10485760, "percent_of_max_inflation_rate": 0, "storage_reserve_ratio": 1000, "base_per_transaction_net_usage":0, "base_per_transaction_cpu_usage": 0, "base_per_action_cpu_usage":0, "base_setcode_cpu_usage":0, "per_signature_cpu_usage":0, "per_lock_net_usage":0, "context_free_discount_cpu_usage_num":0, "context_free_discount_cpu_usage_den":0, "max_transaction_cpu_usage":0, "max_transaction_net_usage":0, "max_block_cpu_usage":0, "target_block_cpu_usage_pct":0, "max_block_net_usage":0, "target_block_net_usage_pct":0, "max_transaction_lifetime":0, "max_transaction_exec_time":0, "max_authority_depth":0, "max_inline_depth":0, "max_inline_action_size":0, "max_generated_transaction_count":0, "max_transaction_delay":0 }}' -p producer
+cleos push action eosio regproducer '{"producer":"producer", "producer_key": "EOS8dCVTUjdCv94GB7wr7vFTJri7iRYd7c4y6U8tHGaK3peMerUr5", "url":"http://eosio.sg"}' -p producer
 ```
-
-**These command tested in [DAWN-2018-04-27-ALPHA](https://github.com/EOSIO/eos/tree/DAWN-2018-04-27-ALPHA)*
 
 The **-p** parameter means sign this transaction. Then we need to dive into the source code in [cleos main](https://github.com/EOSIO/eos/blob/slim/programs/cleos/main.cpp). 
 There are some conventions need to know in **cleos/main.cpp**. Nearly all subcommand functions have two key functions **send_actions** and **create_action**. Such as tranfer, regproducer, delegatebw, undelegatebw, voteproducer and so on.
@@ -69,7 +67,7 @@ void send_actions(std::vector<chain::action>&& actions, int32_t extra_kcpu = 100
 **We just list part of code, please refer to source code.*
 
 ###push_actions
-1. The **vector of actions** are set in **transaction**
+1. The **vector of actions** are injected in **transaction**
 2. **compression** means this transaction need to **zip** or not before put into blockchain
 
 ```cpp
@@ -125,7 +123,7 @@ fc::variant determine_required_keys(const signed_transaction& trx) {
    return required_keys["required_keys"];
 }
 ```
-If required to sign a transaction, make sure keosd deamon up which hold the wallet\_api plugin and wallet\_plugin. Firstly to call wallet api to get all unlock public keys, and then to call the **chain_api** to verify the authorization from blockchain database.
+If required to sign a transaction, make sure **keosd** deamon up which hold the wallet\_api plugin and wallet\_plugin. Firstly to call wallet api to get all unlock public keys, and then to call the **chain_api** to verify the authorization from blockchain database.
 
 
 ###get\_required_keys
@@ -186,9 +184,9 @@ bool satisfied( const permission_level& permission, permission_cache_type* cache
 }
 ```
 
-In this snippet, the author design a cache to put all the permission. It will increase the speed of find. 
+In this snippet, the author design a cache to put all the permission. It will increase the speed of finding. 
 
-1. Sometimes we are curious about how to convert the **permission** to **authority** object, because we didn't find the **permission\_to\_authority** function which is lambda function. Until I find the answer in the **misc_tests.cpp**
+1. Sometimes we are curious about how to convert the **permission** to **authority** object, because we didn't find the **permission\_to\_authority** function which is lambda function until I find the answer in the **misc_tests.cpp**
 2. The checker will call **private satisfied** function adding the mapping<keys, account> to the permissions with sorted weights.
 
 ```cpp
@@ -295,7 +293,7 @@ void sign_block( const std::function<signature_type( const digest_type& )>& sign
 } /// sign_block	
 ```
 
-1. The **\_private_keys** is a public property map store in producer plugin, which I think will have some security issue.
+1. The **\_private_keys** is a public property map store in producer plugin.
 2. **finalize_block** will generate the **action\_merkle\_root** and **transaction\_merkle\_root** and create block summary
 3. **sign_block** will use the **private\_key\_itr->second** which is private_key to sign in **lamdba function**  
 4. last step is commit block to the block chain, refer **controller.cpp** for more information.
